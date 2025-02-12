@@ -5,14 +5,15 @@ from pydantic import ConfigDict
 from crewai import Agent
 
 
+
 class DataExtractorAgent(Agent):
-    model_config = ConfigDict(arbitrary_types_allowed=True)  # ALLOW ARBITRARY TYPES
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     get_glpi_incident_details: ClassVar[Any]
     get_glpi_document_content: ClassVar[Any]
     get_glpi_ticket_solution: ClassVar[Any]
     get_glpi_ticket_tasks: ClassVar[Any]
-    glpi_client: GLPIClient  # Type hint for the dependency
+    glpi_client: GLPIClient
 
     def __init__(self, glpi_client: GLPIClient):
         super().__init__(
