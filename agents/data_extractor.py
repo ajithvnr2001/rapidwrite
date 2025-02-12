@@ -3,8 +3,11 @@ from core.glpi import GLPIClient
 from langchain.tools import tool
 from typing import Optional, ClassVar, Any  # Import Any
 from typing import Dict
+from pydantic import BaseModel, ConfigDict
+
 
 class DataExtractorAgent(Agent):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     get_glpi_incident_details: ClassVar[Any]
     get_glpi_document_content: ClassVar[Any]
     get_glpi_ticket_solution: ClassVar[Any]
