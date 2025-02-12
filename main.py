@@ -16,7 +16,7 @@ app = FastAPI()
 glpi_client = GLPIClient()
 
 # Initialize agents
-data_extractor_agent = DataExtractorAgent(glpi_client)
+data_extractor_agent = DataExtractorAgent()
 data_processor_agent = DataProcessorAgent()
 query_handler_agent = QueryHandlerAgent()
 pdf_generator_agent = PDFGeneratorAgent()
