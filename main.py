@@ -16,23 +16,25 @@ app = FastAPI()
 # Initialize GLPI client
 glpi_client = GLPIClient()
 
-# Initialize agents
-data_extractor_agent = DataExtractorAgent()
+# Initialize agents.  CORRECTLY pass glpi_client to DataExtractorAgent.
+data_extractor_agent = DataExtractorAgent(glpi_client=glpi_client)  # CORRECTED
 data_processor_agent = DataProcessorAgent()
 query_handler_agent = QueryHandlerAgent()
 pdf_generator_agent = PDFGeneratorAgent()
 search_indexer_agent = SearchIndexerAgent()
 
-def run_autopdf(incident_id: int, update_solution : bool = False) -> str:
+
+def run_autopdf(incident_id: int, update_solution: bool = False) -> str:
     """Runs the AutoPDF workflow for a given incident ID."""
 
-    # Now we pass glpi_client to the methods that need it.
     extract_incident_task = Task(
         description=f"Extract details for GLPI incident ID {incident_id}",
         agent=data_extractor_agent,
         tools=[data_extractor_agent.get_glpi_incident_details],
         expected_output="Raw data of the incident",
-        function=lambda incident_id=incident_id : data_extractor_agent.get_glpi_incident_details(incident_id=incident_id) # Pass incident_id here
+        function=lambda incident_id=incident_id: data_extractor_agent.get_glpi_incident_details(
+            incident_id=incident_id
+        ),  # Pass incident_id here
     )
     extract_solution_task = Task(
         description=f"Extract solution for GLPI incident ID {incident_id}",
@@ -40,7 +42,9 @@ def run_autopdf(incident_id: int, update_solution : bool = False) -> str:
         tools=[data_extractor_agent.get_glpi_ticket_solution],
         expected_output="Raw solution data",
         context=[extract_incident_task],
-        function=lambda ticket_id=incident_id: data_extractor_agent.get_glpi_ticket_solution(ticket_id=ticket_id)  # Pass ticket_id (which is incident_id)
+        function=lambda ticket_id=incident_id: data_extractor_agent.get_glpi_ticket_solution(
+            ticket_id=ticket_id
+        ),  # Pass ticket_id (which is incident_id)
     )
     extract_tasks_task = Task(
         description=f"Extract tasks for GLPI incident ID {incident_id}",
@@ -48,8 +52,9 @@ def run_autopdf(incident_id: int, update_solution : bool = False) -> str:
         tools=[data_extractor_agent.get_glpi_ticket_tasks],
         expected_output="Raw tasks data",
         context=[extract_incident_task],
-        function=lambda ticket_id=incident_id: data_extractor_agent.get_glpi_ticket_tasks(ticket_id=ticket_id) # Pass ticket_id
-
+        function=lambda ticket_id=incident_id: data_extractor_agent.get_glpi_ticket_tasks(
+            ticket_id=ticket_id
+        ),  # Pass ticket_id
     )
     document_id = 12345  # TODO: Get this dynamically from GLPI
     extract_document_task = Task(
@@ -58,42 +63,52 @@ def run_autopdf(incident_id: int, update_solution : bool = False) -> str:
         tools=[data_extractor_agent.get_glpi_document_content],
         expected_output="Raw document content",
         context=[],
-        function=lambda document_id=document_id: data_extractor_agent.get_glpi_document_content(document_id=document_id) # Pass doc id
-
+        function=lambda document_id=document_id: data_extractor_agent.get_glpi_document_content(
+            document_id=document_id
+        ),  # Pass doc id
     )
     process_data_task = Task(
         description="Process the extracted data from GLPI",
         agent=data_processor_agent,
         expected_output="Cleaned and structured data",
-        context=[extract_incident_task, extract_document_task, extract_solution_task, extract_tasks_task],
+        context=[
+            extract_incident_task,
+            extract_document_task,
+            extract_solution_task,
+            extract_tasks_task,
+        ],
         function=lambda: data_processor_agent.process_glpi_data(
             incident_data=extract_incident_task.output,
             document_data=extract_document_task.output,
             solution_data=extract_solution_task.output,
-            task_data=extract_tasks_task.output
-        )
+            task_data=extract_tasks_task.output,
+        ),
     )
     generate_content_task = Task(
         description="Generate report content using RAG",
         agent=query_handler_agent,
         expected_output="Generated content for the report",
         context=[process_data_task],
-        function=lambda: query_handler_agent.run_rag(processed_data=process_data_task.output)
+        function=lambda: query_handler_agent.run_rag(processed_data=process_data_task.output),
     )
     create_pdf_task = Task(
         description="Create a PDF report",
         agent=pdf_generator_agent,
         tools=[pdf_generator_agent.create_pdf_from_text_tool_method],
         expected_output="PDF file as bytes.",
-        function=lambda: pdf_generator_agent.create_pdf_from_text_tool_method(content=generate_content_task.output, title=f"Incident Report - {incident_id}"),
-        context=[generate_content_task]
+        function=lambda: pdf_generator_agent.create_pdf_from_text_tool_method(
+            content=generate_content_task.output, title=f"Incident Report - {incident_id}"
+        ),
+        context=[generate_content_task],
     )
     index_pdf_task = Task(
         description="Store PDF and index",
         agent=search_indexer_agent,
         expected_output="Confirmation message",
         context=[create_pdf_task, process_data_task],
-        function=lambda: search_indexer_agent.index_and_store_pdf(pdf_content=create_pdf_task.output, processed_data=process_data_task.output)
+        function=lambda: search_indexer_agent.index_and_store_pdf(
+            pdf_content=create_pdf_task.output, processed_data=process_data_task.output
+        ),
     )
 
     crew = Crew(
@@ -112,16 +127,18 @@ def run_autopdf(incident_id: int, update_solution : bool = False) -> str:
             process_data_task,
             generate_content_task,
             create_pdf_task,
-            index_pdf_task
+            index_pdf_task,
         ],
         process=Process.sequential,
-        verbose=2
+        verbose=2,
     )
 
     try:
         result = crew.kickoff()
         if update_solution:
-            solution_update_result = glpi_client.update_ticket_solution(incident_id, result['generated_content'])
+            solution_update_result = glpi_client.update_ticket_solution(
+                incident_id, result["generated_content"]
+            )
             if solution_update_result:
                 print(f"Solution for incident {incident_id} updated successfully.")
             else:
@@ -143,20 +160,20 @@ async def glpi_webhook(request: Request):
             raise HTTPException(status_code=400, detail="Invalid webhook payload format")
 
         for event in data:
-            if 'event' not in event or 'itemtype' not in event or 'items_id' not in event:
+            if "event" not in event or "itemtype" not in event or "items_id" not in event:
                 raise HTTPException(status_code=400, detail="Missing required fields in event")
 
-            if event['itemtype'] == 'Ticket':
-                incident_id = int(event['items_id'])
+            if event["itemtype"] == "Ticket":
+                incident_id = int(event["items_id"])
 
-                if event['event'] in ('add', 'update'):
-                    print("*"*50)
+                if event["event"] in ("add", "update"):
+                    print("*" * 50)
                     print(f"Received event: {event['event']} for Ticket ID: {incident_id}")
-                    print("*"*50)
-                    if event['event'] == 'update':
-                        run_autopdf(incident_id, update_solution = True)
+                    print("*" * 50)
+                    if event["event"] == "update":
+                        run_autopdf(incident_id, update_solution=True)
                     else:
-                        run_autopdf(incident_id, update_solution = False)
+                        run_autopdf(incident_id, update_solution=False)
                 else:
                     print(f"Ignoring event type: {event['event']} for Ticket")
 
@@ -176,4 +193,5 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port="8000")
