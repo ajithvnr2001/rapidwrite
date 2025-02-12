@@ -1,9 +1,10 @@
 import os
 from dotenv import load_dotenv
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, HttpUrl
 
 load_dotenv()
+
 class Settings(BaseSettings):
     glpi_url: str = "https://ltimindtree.in1.glpi-network.cloud"
     glpi_app_token: str = "bnVEfEQ6n7kYpzFCEiF1UgCCWJkd5bWyU7UiQXd3"
@@ -18,5 +19,7 @@ class Settings(BaseSettings):
     model_name: str = "DeepSeek-R1"
     bucket_name: str = "rapidwrite"
     max_rag_iterations: int = 3
+
+    model_config = SettingsConfigDict(env_file=".env", extra='ignore')
 
 settings = Settings()
