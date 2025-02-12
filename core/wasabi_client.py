@@ -8,9 +8,9 @@ class WasabiClient:
     def __init__(self) -> None:
         self.client = boto3.client(
             's3',
-            endpoint_url=settings.wasabi_endpoint,  # Using settings
-            aws_access_key_id=settings.wasabi_access_key,  # Using settings
-            aws_secret_access_key=settings.wasabi_secret_key,  # Using settings
+            endpoint_url=str(settings.wasabi_endpoint),  # Convert to string here
+            aws_access_key_id=settings.wasabi_access_key,
+            aws_secret_access_key=settings.wasabi_secret_key,
         )
 
     def upload_document(self, bucket_name: str, object_name: str, data: bytes) -> None:
