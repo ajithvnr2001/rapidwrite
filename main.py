@@ -10,13 +10,25 @@ from typing import Dict
 from fastapi import FastAPI, Request, HTTPException
 from datetime import datetime
 import json
+from crewai import Crew, Task, Process
+from agents.data_extractor import DataExtractorAgent
+from agents.data_processor import DataProcessorAgent
+from agents.query_handler import QueryHandlerAgent
+from agents.pdf_generator import PDFGeneratorAgent
+from agents.search_indexer import SearchIndexerAgent
+from core.glpi import GLPIClient
+from core.config import settings
+from typing import Dict
+from fastapi import FastAPI, Request, HTTPException
+from datetime import datetime
+import json
 
 app = FastAPI()
 
 # Initialize GLPI client
 glpi_client = GLPIClient()
 
-# Initialize agents. Pass glpi_client to DataExtractorAgent.
+# Initialize agents.  Pass glpi_client to DataExtractorAgent.
 data_extractor_agent = DataExtractorAgent(glpi_client=glpi_client)  # CORRECT
 data_processor_agent = DataProcessorAgent()
 query_handler_agent = QueryHandlerAgent()
@@ -30,20 +42,17 @@ def run_autopdf(incident_id: int, update_solution: bool = False) -> str:
     extract_incident_task = Task(
         description=f"Extract details for GLPI incident ID {incident_id}",
         agent=data_extractor_agent,
-        # tools=[data_extractor_agent.get_glpi_incident_details],  # No need to list tools here if using 'function'
         expected_output="Raw data of the incident",
     )
     extract_solution_task = Task(
         description=f"Extract solution for GLPI incident ID {incident_id}",
         agent=data_extractor_agent,
-        # tools=[data_extractor_agent.get_glpi_ticket_solution],  # No need to list tools here
         expected_output="Raw solution data",
         context=[extract_incident_task],
     )
     extract_tasks_task = Task(
         description=f"Extract tasks for GLPI incident ID {incident_id}",
         agent=data_extractor_agent,
-        # tools=[data_extractor_agent.get_glpi_ticket_tasks],      # No need to list tools here
         expected_output="Raw tasks data",
         context=[extract_incident_task],
     )
@@ -51,7 +60,6 @@ def run_autopdf(incident_id: int, update_solution: bool = False) -> str:
     extract_document_task = Task(
         description=f"Extract content of document ID {document_id}",
         agent=data_extractor_agent,
-        # tools=[data_extractor_agent.get_glpi_document_content], # No need to list tools
         expected_output="Raw document content",
         context=[],
     )
@@ -75,7 +83,6 @@ def run_autopdf(incident_id: int, update_solution: bool = False) -> str:
     create_pdf_task = Task(
         description="Create a PDF report",
         agent=pdf_generator_agent,
-        # tools=[pdf_generator_agent.create_pdf_from_text_tool_method], # No need
         expected_output="PDF file as bytes.",
         context=[generate_content_task],
     )
