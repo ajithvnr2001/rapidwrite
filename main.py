@@ -35,12 +35,25 @@ from fastapi import FastAPI, Request, HTTPException
 from datetime import datetime
 import json
 
+from crewai import Crew, Task, Process
+from agents.data_extractor import DataExtractorAgent
+from agents.data_processor import DataProcessorAgent
+from agents.query_handler import QueryHandlerAgent
+from agents.pdf_generator import PDFGeneratorAgent
+from agents.search_indexer import SearchIndexerAgent
+from core.glpi import GLPIClient
+from core.config import settings
+from typing import Dict
+from fastapi import FastAPI, Request, HTTPException
+from datetime import datetime
+import json
+
 app = FastAPI()
 
-# Initialize GLPI client
+# Initialize GLPI client OUTSIDE the function
 glpi_client = GLPIClient()
 
-# Initialize agents.  Pass glpi_client to DataExtractorAgent.
+# Initialize agents, passing glpi_client to DataExtractorAgent.
 data_extractor_agent = DataExtractorAgent(glpi_client=glpi_client)  # CORRECT
 data_processor_agent = DataProcessorAgent()
 query_handler_agent = QueryHandlerAgent()
@@ -126,21 +139,19 @@ def run_autopdf(incident_id: int, update_solution: bool = False) -> str:
         process=Process.sequential,
         verbose=2,
     )
-
     try:
         result = crew.kickoff()
-        if update_solution:
-            solution_update_result = glpi_client.update_ticket_solution(
-                incident_id, result["generated_content"]
-            )
-            if solution_update_result:
-                print(f"Solution for incident {incident_id} updated successfully.")
-            else:
-                print(f"Failed to update solution for incident {incident_id}.")
-        return result
 
+        if update_solution:
+                solution_update_result = glpi_client.update_ticket_solution(incident_id, result['crew_results'][-1])
+                if solution_update_result:
+                    print(f"Solution for incident {incident_id} updated successfully.")
+                else:
+                    print(f"Failed to update solution for incident {incident_id}.")
+        return result
     finally:
         glpi_client.close_session()
+
 
 
 @app.post("/webhook")
@@ -154,7 +165,7 @@ async def glpi_webhook(request: Request):
             raise HTTPException(status_code=400, detail="Invalid webhook payload format")
 
         for event in data:
-            if "event" not in event or "itemtype" not in event or "items_id" not in event:
+            if 'event' not in event or 'itemtype' not in event or 'items_id' not in event:
                 raise HTTPException(status_code=400, detail="Missing required fields in event")
 
             if event["itemtype"] == "Ticket":
