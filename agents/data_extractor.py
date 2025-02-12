@@ -1,37 +1,8 @@
-from crewai import Agent
 from core.glpi import GLPIClient
 from langchain.tools import tool
-from typing import Optional, ClassVar, Any  # Import Any
-from typing import Dict
-from pydantic import BaseModel, ConfigDict
+from typing import Optional, ClassVar, Any, List, Dict
+from pydantic import ConfigDict
 from crewai import Agent
-from core.glpi import GLPIClient
-from langchain.tools import tool
-from typing import Optional, ClassVar, Any
-from typing import Dict
-from crewai import Agent
-from core.glpi import GLPIClient
-from langchain.tools import tool
-from typing import Optional, ClassVar, Any
-from typing import Dict
-from pydantic import ConfigDict  # Import ConfigDict
-from crewai import Agent
-from core.glpi import GLPIClient
-from langchain.tools import tool
-from typing import Optional, ClassVar, Any, List  # Import Any
-from typing import Dict
-from crewai import Crew, Task, Process
-from agents.data_extractor import DataExtractorAgent
-from core.glpi import GLPIClient
-from typing import Dict
-from fastapi import FastAPI, Request, HTTPException  # Keep FastAPI for now
-import json
-from crewai import Agent
-from core.glpi import GLPIClient
-from langchain.tools import tool
-from typing import Optional, ClassVar, Any
-from typing import Dict
-from pydantic import ConfigDict  # Import ConfigDict
 
 
 class DataExtractorAgent(Agent):
