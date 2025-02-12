@@ -6,7 +6,7 @@ import hashlib
 from langchain.tools import tool
 from typing import Dict
 from datetime import datetime
-from typing import Dict, ClassVar
+from typing import Dict, ClassVar  # Import ClassVar
 
 meilisearch_client = MeilisearchClient()
 wasabi_client = WasabiClient()
@@ -23,6 +23,7 @@ class SearchIndexerAgent(Agent):
             verbose=True,
             allow_delegation=False
         )
+
     def index_and_store_pdf(self, pdf_content: bytes, processed_data: Dict) -> str:
         """Stores the PDF in Wasabi, indexes it in Meilisearch, and handles versioning."""
 
@@ -34,7 +35,6 @@ class SearchIndexerAgent(Agent):
         version_string = f"{now}_{content_hash[:10]}"  # Use part of hash for readability
 
         object_name = f"{incident_type}/{incident_id}/{version_string}.pdf"
-
 
         # Check if the document already exists (using the new naming)
         if wasabi_client.document_exists(settings.bucket_name, object_name):

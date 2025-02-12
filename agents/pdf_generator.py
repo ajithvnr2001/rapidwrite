@@ -14,15 +14,17 @@ class PDFGeneratorAgent(Agent):
             verbose=True,
             allow_delegation=False
         )
-    
+
     @tool
     def create_pdf_from_text_tool_method(self, content: str, title: str = "Incident Report") -> bytes:
+        """Creates a PDF from plain text content."""
         if not content:
             raise ValueError("Content is required for PDF Generation.")
         return create_pdf_from_text(content, title)
-    
+
     @tool
     def create_pdf_from_html_tool_method(self, content: str, title: str = "Incident Report") -> bytes:
+        """Creates a PDF from HTML content."""
         if not content:
             raise ValueError("Content is required for PDF Generation.")
         return create_pdf_from_html(content, title)
