@@ -21,7 +21,7 @@ class GLPIClient:
         headers["Authorization"] = f"user_token {self.user_token}"
 
         try:
-            response = requests.get(url, headers=headers, verify=False)
+            response = requests.get(url, headers=headers, verify=True)
             response.raise_for_status()
             session_data = response.json()
             self.session_token = session_data.get("session_token")
