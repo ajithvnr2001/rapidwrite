@@ -1,7 +1,7 @@
 from crewai import Agent
 from core.glpi import GLPIClient
 from langchain.tools import tool
-from typing import Optional, ClassVar, Any
+from typing import Optional, ClassVar, Any  # Import Any
 from typing import Dict
 
 class DataExtractorAgent(Agent):
@@ -9,7 +9,6 @@ class DataExtractorAgent(Agent):
     get_glpi_document_content: ClassVar[Any]
     get_glpi_ticket_solution: ClassVar[Any]
     get_glpi_ticket_tasks: ClassVar[Any]
-    glpi_client: GLPIClient  # Add this line
 
     def __init__(self, glpi_client: GLPIClient):
         super().__init__(
