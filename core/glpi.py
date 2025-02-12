@@ -16,12 +16,12 @@ class GLPIClient:
         self.init_session()
 
     def init_session(self) -> None:
-        url = f"{self.base_url}/initSession"
+        url = f"{self.base_url}/apirest.php/initSession"  # CORRECT URL
         headers = self.headers.copy()
         headers["Authorization"] = f"user_token {self.user_token}"
 
         try:
-            response = requests.get(url, headers=headers, verify=True)
+            response = requests.get(url, headers=headers, verify=False)
             response.raise_for_status()
             session_data = response.json()
             self.session_token = session_data.get("session_token")
@@ -41,7 +41,7 @@ class GLPIClient:
         if not self.session_token:
             return
 
-        url = f"{self.base_url}/killSession"
+        url = f"{self.base_url}/apirest.php/killSession"  # CORRECT URL
         try:
             response = requests.get(url, headers=self.headers, verify=False)
             response.raise_for_status()
@@ -56,7 +56,7 @@ class GLPIClient:
         if not self.session_token:
             self.init_session()
 
-        url = f"{self.base_url}/{endpoint}"
+        url = f"{self.base_url}/apirest.php/{endpoint}"  # CORRECT URL
         try:
             if method.upper() == "GET":
                 response = requests.get(url, headers=self.headers, params=params, verify=False)
@@ -71,11 +71,11 @@ class GLPIClient:
             return response.json()
 
         except requests.exceptions.HTTPError as e:
-             if e.response.status_code == 401:
-                 print("Session expired or invalid. Re-initializing...")
-                 self.init_session()
-                 return self._make_request(method, endpoint, params, data)
-             else:
+            if e.response.status_code == 401:  # Corrected this line
+                print("Session expired or invalid. Re-initializing...")
+                self.init_session()
+                return self._make_request(method, endpoint, params, data)
+            else:
                 print(f"HTTP Error during GLPI request: {e}")
                 raise
         except requests.exceptions.RequestException as e:
@@ -88,9 +88,9 @@ class GLPIClient:
     def get_document(self, document_id: int) -> bytes:
         doc_info = self._make_request("GET", f"Document/{document_id}")
         if "filepath" not in doc_info or "filename" not in doc_info:
-             raise ValueError("Invalid document response from GLPI: missing filepath or filename")
+            raise ValueError("Invalid document response from GLPI: missing filepath or filename")
 
-        download_url = f"{self.base_url}/{doc_info['filepath']}"
+        download_url = f"{self.base_url}/{doc_info['filepath']}" # Corrected
 
         try:
             download_headers = {
