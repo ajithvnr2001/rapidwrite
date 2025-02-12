@@ -16,8 +16,8 @@ app = FastAPI()
 # Initialize GLPI client
 glpi_client = GLPIClient()
 
-# Initialize agents.  CORRECTLY pass glpi_client to DataExtractorAgent.
-data_extractor_agent = DataExtractorAgent(glpi_client=glpi_client)  # CORRECTED
+# Initialize agents. Pass glpi_client to DataExtractorAgent.
+data_extractor_agent = DataExtractorAgent(glpi_client=glpi_client)  # CORRECT
 data_processor_agent = DataProcessorAgent()
 query_handler_agent = QueryHandlerAgent()
 pdf_generator_agent = PDFGeneratorAgent()
@@ -30,42 +30,30 @@ def run_autopdf(incident_id: int, update_solution: bool = False) -> str:
     extract_incident_task = Task(
         description=f"Extract details for GLPI incident ID {incident_id}",
         agent=data_extractor_agent,
-        tools=[data_extractor_agent.get_glpi_incident_details],
+        # tools=[data_extractor_agent.get_glpi_incident_details],  # No need to list tools here if using 'function'
         expected_output="Raw data of the incident",
-        function=lambda incident_id=incident_id: data_extractor_agent.get_glpi_incident_details(
-            incident_id=incident_id
-        ),  # Pass incident_id here
     )
     extract_solution_task = Task(
         description=f"Extract solution for GLPI incident ID {incident_id}",
         agent=data_extractor_agent,
-        tools=[data_extractor_agent.get_glpi_ticket_solution],
+        # tools=[data_extractor_agent.get_glpi_ticket_solution],  # No need to list tools here
         expected_output="Raw solution data",
         context=[extract_incident_task],
-        function=lambda ticket_id=incident_id: data_extractor_agent.get_glpi_ticket_solution(
-            ticket_id=ticket_id
-        ),  # Pass ticket_id (which is incident_id)
     )
     extract_tasks_task = Task(
         description=f"Extract tasks for GLPI incident ID {incident_id}",
         agent=data_extractor_agent,
-        tools=[data_extractor_agent.get_glpi_ticket_tasks],
+        # tools=[data_extractor_agent.get_glpi_ticket_tasks],      # No need to list tools here
         expected_output="Raw tasks data",
         context=[extract_incident_task],
-        function=lambda ticket_id=incident_id: data_extractor_agent.get_glpi_ticket_tasks(
-            ticket_id=ticket_id
-        ),  # Pass ticket_id
     )
     document_id = 12345  # TODO: Get this dynamically from GLPI
     extract_document_task = Task(
         description=f"Extract content of document ID {document_id}",
         agent=data_extractor_agent,
-        tools=[data_extractor_agent.get_glpi_document_content],
+        # tools=[data_extractor_agent.get_glpi_document_content], # No need to list tools
         expected_output="Raw document content",
         context=[],
-        function=lambda document_id=document_id: data_extractor_agent.get_glpi_document_content(
-            document_id=document_id
-        ),  # Pass doc id
     )
     process_data_task = Task(
         description="Process the extracted data from GLPI",
@@ -77,28 +65,18 @@ def run_autopdf(incident_id: int, update_solution: bool = False) -> str:
             extract_solution_task,
             extract_tasks_task,
         ],
-        function=lambda: data_processor_agent.process_glpi_data(
-            incident_data=extract_incident_task.output,
-            document_data=extract_document_task.output,
-            solution_data=extract_solution_task.output,
-            task_data=extract_tasks_task.output,
-        ),
     )
     generate_content_task = Task(
         description="Generate report content using RAG",
         agent=query_handler_agent,
         expected_output="Generated content for the report",
         context=[process_data_task],
-        function=lambda: query_handler_agent.run_rag(processed_data=process_data_task.output),
     )
     create_pdf_task = Task(
         description="Create a PDF report",
         agent=pdf_generator_agent,
-        tools=[pdf_generator_agent.create_pdf_from_text_tool_method],
+        # tools=[pdf_generator_agent.create_pdf_from_text_tool_method], # No need
         expected_output="PDF file as bytes.",
-        function=lambda: pdf_generator_agent.create_pdf_from_text_tool_method(
-            content=generate_content_task.output, title=f"Incident Report - {incident_id}"
-        ),
         context=[generate_content_task],
     )
     index_pdf_task = Task(
@@ -106,9 +84,6 @@ def run_autopdf(incident_id: int, update_solution: bool = False) -> str:
         agent=search_indexer_agent,
         expected_output="Confirmation message",
         context=[create_pdf_task, process_data_task],
-        function=lambda: search_indexer_agent.index_and_store_pdf(
-            pdf_content=create_pdf_task.output, processed_data=process_data_task.output
-        ),
     )
 
     crew = Crew(
