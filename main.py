@@ -22,6 +22,18 @@ from typing import Dict
 from fastapi import FastAPI, Request, HTTPException
 from datetime import datetime
 import json
+from crewai import Crew, Task, Process
+from agents.data_extractor import DataExtractorAgent
+from agents.data_processor import DataProcessorAgent
+from agents.query_handler import QueryHandlerAgent
+from agents.pdf_generator import PDFGeneratorAgent
+from agents.search_indexer import SearchIndexerAgent
+from core.glpi import GLPIClient
+from core.config import settings
+from typing import Dict
+from fastapi import FastAPI, Request, HTTPException
+from datetime import datetime
+import json
 
 app = FastAPI()
 
