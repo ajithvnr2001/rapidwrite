@@ -4,15 +4,19 @@ from langchain.tools import tool
 from typing import Optional, ClassVar, Any  # Import Any
 from typing import Dict
 from pydantic import BaseModel, ConfigDict
+from crewai import Agent
+from core.glpi import GLPIClient
+from langchain.tools import tool
+from typing import Optional, ClassVar, Any
+from typing import Dict
 
 
 class DataExtractorAgent(Agent):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
     get_glpi_incident_details: ClassVar[Any]
     get_glpi_document_content: ClassVar[Any]
     get_glpi_ticket_solution: ClassVar[Any]
     get_glpi_ticket_tasks: ClassVar[Any]
-    glpi_client: GLPIClient
+    glpi_client: GLPIClient  # Type hint for the dependency
 
     def __init__(self, glpi_client: GLPIClient):
         super().__init__(
@@ -20,12 +24,12 @@ class DataExtractorAgent(Agent):
             goal='Retrieve and validate raw data from GLPI',
             backstory="""Expert in extracting data from various sources,
             especially GLPI. Resilient to API issues and data inconsistencies.""",
-            tools=[self.get_glpi_incident_details, self.get_glpi_document_content,
+            tools=[self.get_glpi_incident_details, self.get_glpi_document_content,  # Use tools correctly
                    self.get_glpi_ticket_solution, self.get_glpi_ticket_tasks],
             verbose=True,
             allow_delegation=False
         )
-        self.glpi_client = glpi_client
+        self.glpi_client = glpi_client  # Correctly assign the dependency
 
     @tool
     def get_glpi_incident_details(self, incident_id: int) -> str:
