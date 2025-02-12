@@ -3,9 +3,7 @@ from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 from pydantic import Field, HttpUrl
 
-
 load_dotenv()
-
 class Settings(BaseSettings):
     glpi_url: str = "https://ltimindtree.in1.glpi-network.cloud"
     glpi_app_token: str = "bnVEfEQ6n7kYpzFCEiF1UgCCWJkd5bWyU7UiQXd3"
