@@ -4,9 +4,9 @@ from core.wasabi_client import WasabiClient
 from core.config import settings
 import hashlib
 from langchain.tools import tool
-from typing import Dict
+from typing import Dict, ClassVar, Any
 from datetime import datetime
-from typing import Dict, ClassVar  # Import ClassVar
+
 
 meilisearch_client = MeilisearchClient()
 wasabi_client = WasabiClient()
