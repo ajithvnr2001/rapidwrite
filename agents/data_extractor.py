@@ -26,70 +26,71 @@ from core.glpi import GLPIClient
 from typing import Dict
 from fastapi import FastAPI, Request, HTTPException  # Keep FastAPI for now
 import json
-
-app = FastAPI()
-
-# Initialize GLPI client OUTSIDE the function
-glpi_client = GLPIClient()
-
-# Initialize ONLY the DataExtractorAgent, passing glpi_client.
-data_extractor_agent = DataExtractorAgent(glpi_client=glpi_client)
+from crewai import Agent
+from core.glpi import GLPIClient
+from langchain.tools import tool
+from typing import Optional, ClassVar, Any
+from typing import Dict
+from pydantic import ConfigDict  # Import ConfigDict
 
 
-def run_autopdf(incident_id: int = 123) -> None:  # Simplified for testing
-    """Runs a simplified workflow with just the data extraction."""
+class DataExtractorAgent(Agent):
+    model_config = ConfigDict(arbitrary_types_allowed=True)  # ALLOW ARBITRARY TYPES
 
-    extract_incident_task = Task(
-        description=f"Extract details for GLPI incident ID {incident_id}",
-        agent=data_extractor_agent,
-        expected_output="Raw data of the incident",
-    )
+    get_glpi_incident_details: ClassVar[Any]
+    get_glpi_document_content: ClassVar[Any]
+    get_glpi_ticket_solution: ClassVar[Any]
+    get_glpi_ticket_tasks: ClassVar[Any]
+    glpi_client: GLPIClient  # Type hint for the dependency
 
-    crew = Crew(
-        agents=[data_extractor_agent],  # Only one agent
-        tasks=[extract_incident_task],  # Only one task
-        process=Process.sequential,
-        verbose=2,
-    )
+    def __init__(self, glpi_client: GLPIClient):
+        super().__init__(
+            role='Data Extractor',
+            goal='Retrieve and validate raw data from GLPI',
+            backstory="""Expert in extracting data from various sources,
+            especially GLPI. Resilient to API issues and data inconsistencies.""",
+            tools=[self.get_glpi_incident_details, self.get_glpi_document_content,
+                   self.get_glpi_ticket_solution, self.get_glpi_ticket_tasks],
+            verbose=True,
+            allow_delegation=False
+        )
+        self.glpi_client = glpi_client
 
-    result = crew.kickoff()
-    print(result)  # Print the result for verification
+    @tool
+    def get_glpi_incident_details(self, incident_id: int) -> str:
+        """Fetches details for a specific incident from GLPI."""
+        try:
+            incident = self.glpi_client.get_incident(incident_id)
+            return str(incident)
+        except Exception as e:
+            print(f"Error in get_glpi_incident_details: {e}")
+            return ""
 
+    @tool
+    def get_glpi_document_content(self, document_id: int) -> str:
+        """Fetches the content of a document from GLPI."""
+        try:
+            document_content = self.glpi_client.get_document(document_id)
+            return str(document_content)
+        except Exception as e:
+            print(f"Error in get_glpi_document_content: {e}")
+            return ""
 
-@app.post("/webhook")  # Keep the webhook for testing
-async def glpi_webhook(request: Request):
-    """Handles incoming webhooks from GLPI (simplified)."""
-    try:
-        body = await request.body()
-        data = json.loads(body.decode())
-        if not isinstance(data, list):
-            raise HTTPException(status_code=400, detail="Invalid webhook payload format")
-        for event in data:
-            if 'event' not in event or 'itemtype' not in event or 'items_id' not in event:
-                raise HTTPException(status_code=400, detail="Missing required fields in event")
-            if event['itemtype'] == 'Ticket':
-                incident_id = int(event['items_id'])
-                if event['event'] in ('add', 'update'):
-                    print("*"*50)
-                    print(f"Received event: {event['event']} for Ticket ID: {incident_id}")
-                    print("*"*50)
-                    run_autopdf(incident_id)  # Call with a default incident ID
-                else:
-                    print(f"Ignoring event type: {event['event']} for Ticket")
+    @tool
+    def get_glpi_ticket_solution(self, ticket_id: int) -> str:
+        """Retrieves the solution field from a GLPI ticket."""
+        try:
+            return self.glpi_client.get_ticket_solution(ticket_id)
+        except Exception as e:
+            print(f"Error in get_glpi_ticket_solution: {e}")
+            return ""
 
-        return {"message": "Webhook received and processed"}
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid JSON payload")
-    except Exception as e:
-        print(f"Error in webhook: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
-
-
-@app.get("/")
-async def root():
-    return {"message": "AutoPDF is running!"}
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port="8000")
+    @tool
+    def get_glpi_ticket_tasks(self, ticket_id: int) -> str:
+        """Retrieves the tasks from a GLPI ticket."""
+        try:
+            tasks = self.glpi_client.get_ticket_tasks(ticket_id)
+            return str(tasks)
+        except Exception as e:
+            print(f"Error in get_glpi_ticket_tasks: {e}")
+            return ""
